@@ -35,11 +35,15 @@ export const BalancePage = (props) => {
   const [balance, setBalance] = useState(null); // { amount, unit, allocation }
   const [error, setError] = useState(null);
   const [mint, setMint] = useState(null);
+  const [accessOptions, setAccessOptions] = useState([]);
 
-  // resolve the default (best) mint + step info from the net4sats details
+  // resolve the default (best) mint + step info from the net4sats details.
+  // The full option list is kept: a note may come from any advertised mint, and
+  // decoding needs that mint's keysets, so the candidates must not collapse to one.
   useEffect(() => {
     const options = getAccessOptions(net4satsDetails.detailsEvent, t);
     if (options.length) {
+      setAccessOptions(options);
       setMint(options[0]);
     }
   }, [net4satsDetails]);
@@ -51,14 +55,19 @@ export const BalancePage = (props) => {
       setError(null);
       return;
     }
-    const result = getInternetBalance(token, mint, t);
-    if (!result.status) {
-      setBalance(null);
-      setError(result);
-    } else {
-      setBalance(result.value);
-      setError(null);
-    }
+    let cancelled = false;
+    (async () => {
+      const result = await getInternetBalance(token, mint, t, accessOptions);
+      if (cancelled) return;
+      if (!result.status) {
+        setBalance(null);
+        setError(result);
+      } else {
+        setBalance(result.value);
+        setError(null);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [token, mint]);
 
   const stepSize = mint ? getStepSizeValues(mint, t) : null;

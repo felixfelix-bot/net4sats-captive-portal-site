@@ -19,9 +19,9 @@ import { calculateAllocation } from './net4sats';
 // @param {function} i18n - translation function
 // @returns {object} { status: 1, value: { amount, unit, allocation: {value, unit} } }
 //                    or { status: 0, code, label, message } when the token is invalid
-export const getInternetBalance = (token, mint, i18n) => {
+export const getInternetBalance = async (token, mint, i18n, candidates = []) => {
   // validate the token first (format, decode, proof sum, mint match)
-  const validation = validateToken(token, mint, i18n);
+  const validation = await validateToken(token, mint, i18n, candidates);
   if (!validation.status) {
     return validation;
   }

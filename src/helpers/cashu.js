@@ -1,5 +1,5 @@
 // external
-import { getDecodedToken } from "@cashu/cashu-ts";
+import { getDecodedToken, CashuMint } from "@cashu/cashu-ts";
 import { getPublicKey, getEventHash, getSignature } from "nostr-tools";
 
 // helpers
@@ -42,8 +42,65 @@ export const extractProofsFromToken = (decodedToken) => {
   return proofs;
 };
 
+// A modern cashu token carries SHORT keyset ids, which cashu-ts can only decode when
+// it is given the mint's keysets. Called without them it throws
+//   "A short keyset ID v2 was encountered, but got no keysets to map it to."
+// which the portal reported as CU102 for EVERY valid token, from any mint.
+//
+// There is a chicken-and-egg here: getDecodedToken throws before revealing the token's
+// mint, so the mint cannot be read out of the token first. Instead try a candidate
+// list — the selected option first, then the portal's other mints — and accept the
+// first keysets that decode. Results (keysets and the winning mint) are cached.
+const keysetCache = new Map();
+
+// The portal's access options are OBJECTS ({ url, metric, step_size, ... }); the
+// helper also has to tolerate a bare URL string from other call sites.
+const toMintUrl = (m) => {
+  if (!m) return null;
+  if (typeof m === "string") return m;
+  if (typeof m === "object" && typeof m.url === "string") return m.url;
+  return null;
+};
+
+const getKeysetsFor = async (mintUrl) => {
+  if (!mintUrl) return [];
+  if (keysetCache.has(mintUrl)) return keysetCache.get(mintUrl);
+  try {
+    const res = await new CashuMint(mintUrl).getKeySets();
+    const list = Array.isArray(res) ? res : res?.keysets || [];
+    keysetCache.set(mintUrl, list);
+    return list;
+  } catch (err) {
+    // An unreachable mint must not turn a good token into CU104.
+    console.warn("could not fetch mint keysets:", mintUrl, err?.message || err);
+    keysetCache.set(mintUrl, []);
+    return [];
+  }
+};
+
+// Try the selected mint, then the other options, then any mint the token names.
+// Returns { decoded, mintUrl } or null.
+const decodeWithAnyMint = async (raw, mint, candidates = []) => {
+  const seen = new Set();
+  const urls = [];
+  const add = (m) => { const u = toMintUrl(m); if (u && !seen.has(u)) { seen.add(u); urls.push(u); } };
+  add(mint);
+  // NOTE: candidates must come from the caller. `i18n` is the translation FUNCTION,
+  // not a carrier of the mint list; reading options off it silently yielded only the
+  // selected mint, so a note from any other mint still failed to decode.
+  candidates.forEach(add);
+  for (const url of urls) {
+    const keysets = await getKeysetsFor(url);
+    if (!keysets.length) continue;
+    try {
+      return { decoded: getDecodedToken(raw, keysets), mintUrl: url };
+    } catch { /* wrong mint, or not this token's keysets: try the next */ }
+  }
+  return null;
+};
+
 // validate a cashu token: check format, decode, extract proofs, and sum value
-export const validateToken = (token = "", mint, i18n) => {
+export const validateToken = async (token = "", mint, i18n, candidates = []) => {
   try {
     // check for empty or non-string token
     if ("string" !== typeof token || !token.trim()) {
@@ -68,7 +125,15 @@ export const validateToken = (token = "", mint, i18n) => {
     // attempt to decode the token using the getDecodedToken method
     let decodedToken = null;
     try {
-      decodedToken = getDecodedToken(token.trim());
+      const raw = token.trim();
+      const hit = await decodeWithAnyMint(raw, mint, candidates);
+      if (hit) {
+        decodedToken = hit.decoded;
+      } else {
+        // Last resort: decode without keysets. Succeeds for legacy (long id) tokens
+        // and fails for modern ones, which is the honest outcome.
+        decodedToken = getDecodedToken(raw, await getKeysetsFor(toMintUrl(mint)));
+      }
       if (!decodedToken) {
         return {
           status: 0,
