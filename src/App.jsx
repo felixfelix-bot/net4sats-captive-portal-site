@@ -263,7 +263,7 @@ export const AccessGranted = ({ allocation }) => {
       <div className="net4sats-captive-portal-access-granted-duration">
         <span className="net4sats-captive-portal-access-granted-duration-label">
           {t('access_duration_label')}
-        </span>
+        </span>{' '}
         <span className="net4sats-captive-portal-access-granted-duration-value">
           {allocation}
         </span>
