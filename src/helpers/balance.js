@@ -10,7 +10,7 @@
 
 // helpers (real implementations)
 import { validateToken } from './cashu';
-import { calculateAllocation } from './net4sats';
+import { calculateAllocation, getnet4satsBaseUrl } from './net4sats';
 
 // Compute the internet balance a Cashu token represents for a given mint.
 //
@@ -46,9 +46,13 @@ export const formatBalance = (allocation) => {
   return `${allocation.value} ${allocation.unit}`;
 };
 
+// The balance endpoint is served by the ROUTER API, not by the portal's static
+// docroot. A relative '/balance' resolves against the portal origin (:2051), where
+// uhttpd has no such route, so it 404s and the page always reported
+// "Balance unavailable". Resolve the API origin the same way the purchase flow does.
 export const fetchBalanceData = async (i18n) => {
   try {
-    const resp = await fetch('/balance');
+    const resp = await fetch(`${getnet4satsBaseUrl()}/balance`);
     if (!resp.ok) return { status: 0, code: 'network', message: 'Balance unavailable' };
     const data = await resp.json();
     return { status: 1, value: data };
