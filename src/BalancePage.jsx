@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Footer, Header, Loading } from './App.jsx';
 import Background from './components/Background.jsx';
 import { Error, Success } from './components/Status.jsx';
-import { fetchBalanceData, mapBalancePayload, formatMetricValue, getMetricLabel } from './helpers/balance.js';
+import { fetchBalanceData, mapBalancePayload, formatDisplayValue, getMetricLabel } from './helpers/balance.js';
 
 import './App.scss';
 import './BalancePage.scss';
@@ -17,11 +17,6 @@ const StatCard = ({ label, value, detail }) => {
     <p className="net4sats-captive-portal-balance-card-value">{value}</p>
     {detail && <p className="net4sats-captive-portal-balance-card-detail">{detail}</p>}
   </div>;
-};
-
-const formatDisplayValue = (amount, metric, i18n) => {
-  const formatted = formatMetricValue(amount, metric, i18n);
-  return `${formatted.value} ${formatted.unit}`.trim();
 };
 
 const BalancePage = () => {
@@ -70,9 +65,9 @@ const BalancePage = () => {
   }, [ready, t]);
 
   const metric = balance?.metric || '';
-  const remaining = balance ? formatDisplayValue(balance.remaining, metric, t) : '';
-  const usage = balance ? formatDisplayValue(balance.usage, metric, t) : '';
-  const allotment = balance ? formatDisplayValue(balance.allotment, metric, t) : '';
+  const remaining = balance ? formatDisplayValue(balance.remaining, metric) : '';
+  const usage = balance ? formatDisplayValue(balance.usage, metric) : '';
+  const allotment = balance ? formatDisplayValue(balance.allotment, metric) : '';
   const startedAt = balance?.startedAt ? balance.startedAt.toLocaleString() : '';
 
   return <div id="net4sats-captive-portal" className="net4sats-captive-portal net4sats-captive-portal-balance-page">

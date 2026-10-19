@@ -68,4 +68,33 @@ describe('router /balance payload maps onto the page', () => {
     expect(() => mapBalancePayload(null)).not.toThrow();
     expect(mapBalancePayload(null).sessionActive).toBe(false);
   });
+describe('formatted values are rendered, not "undefined undefined"', () => {
+  // formatMetricValue returns a STRING ("145.6 MB"). The page's formatDisplayValue
+  // wrapped it as `${formatted.value} ${formatted.unit}`, which on a string is
+  // undefined undefined -- so every stat card showed that instead of the amount.
+  it('formatDisplayValue returns a readable string for bytes', async () => {
+    const { formatDisplayValue } = await import('../src/helpers/balance.js');
+    const out = formatDisplayValue(152685568, 'bytes');
+    expect(out).not.toContain('undefined');
+    expect(out).toBe('145.6 MB');
+  });
+
+  it('formatDisplayValue handles zero and small values', async () => {
+    const { formatDisplayValue } = await import('../src/helpers/balance.js');
+    expect(formatDisplayValue(0, 'bytes')).toBe('0 B');
+    expect(formatDisplayValue(2048, 'bytes')).toBe('2 KB');
+  });
+
+  it('formatDisplayValue handles milliseconds', async () => {
+    const { formatDisplayValue } = await import('../src/helpers/balance.js');
+    const out = formatDisplayValue(3600000, 'milliseconds');
+    expect(out).not.toContain('undefined');
+    expect(out).toContain('1h');
+  });
+
+  it('formatDisplayValue survives a missing value', async () => {
+    const { formatDisplayValue } = await import('../src/helpers/balance.js');
+    expect(formatDisplayValue(undefined, 'bytes')).toBe('—');
+  });
+});
 });

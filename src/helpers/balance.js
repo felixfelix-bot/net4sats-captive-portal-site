@@ -99,3 +99,11 @@ export const mapBalancePayload = (payload) => {
     mac: typeof p.mac === 'string' ? p.mac : '',
   };
 };
+
+// Format a byte/ms amount for display. formatMetricValue already returns a ready
+// string ("145.6 MB"), so this must NOT index into it: the page previously did
+// `${formatted.value} ${formatted.unit}`, which on a string yields
+// "undefined undefined" — that is exactly what the stat cards showed on hardware.
+export const formatDisplayValue = (amount, metric) => {
+  return formatMetricValue(amount, metric);
+};
