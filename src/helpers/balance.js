@@ -78,3 +78,24 @@ export const formatMetricValue = (amount, metric) => {
 export const getMetricLabel = (metric, t) => {
   return metric === 'bytes' ? (t ? t('balance_data') : 'Data') : (t ? t('balance_time') : 'Time');
 };
+
+// Map the router's /balance payload onto the shape the page renders.
+//
+// The router returns { status, session_active, metric, usage, allotment, remaining,
+// start_time, mac }. The page previously read its own invented field names, so every
+// value rendered as `undefined` even once the request finally succeeded. Keeping the
+// translation in one named function (rather than inline in JSX) makes the contract
+// testable without a DOM.
+export const mapBalancePayload = (payload) => {
+  const p = payload && typeof payload === 'object' ? payload : {};
+  const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+  return {
+    sessionActive: p.session_active === true,
+    metric: typeof p.metric === 'string' ? p.metric : 'bytes',
+    usage: num(p.usage),
+    allotment: num(p.allotment),
+    remaining: num(p.remaining),
+    startedAt: num(p.start_time) ? new Date(num(p.start_time) * 1000) : null,
+    mac: typeof p.mac === 'string' ? p.mac : '',
+  };
+};

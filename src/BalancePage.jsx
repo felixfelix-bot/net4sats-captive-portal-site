@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Footer, Header, Loading } from './App.jsx';
 import Background from './components/Background.jsx';
 import { Error, Success } from './components/Status.jsx';
-import { fetchBalanceData, formatMetricValue, getMetricLabel } from './helpers/balance.js';
+import { fetchBalanceData, mapBalancePayload, formatMetricValue, getMetricLabel } from './helpers/balance.js';
 
 import './App.scss';
 import './BalancePage.scss';
@@ -48,7 +48,8 @@ const BalancePage = () => {
       }
 
       if (response.status) {
-        setBalance(response.value);
+        // the router's field names differ from the page's: normalise once, here
+        setBalance(mapBalancePayload(response.value));
         setError(null);
       } else {
         setError(response);
@@ -72,7 +73,7 @@ const BalancePage = () => {
   const remaining = balance ? formatDisplayValue(balance.remaining, metric, t) : '';
   const usage = balance ? formatDisplayValue(balance.usage, metric, t) : '';
   const allotment = balance ? formatDisplayValue(balance.allotment, metric, t) : '';
-  const startedAt = balance?.start_time ? new Date(balance.start_time * 1000).toLocaleString() : '';
+  const startedAt = balance?.startedAt ? balance.startedAt.toLocaleString() : '';
 
   return <div id="net4sats-captive-portal" className="net4sats-captive-portal net4sats-captive-portal-balance-page">
     <Background />
@@ -93,7 +94,7 @@ const BalancePage = () => {
               </div>
             </div>}
 
-            {!loading && !error && balance && !balance.session_active && <div className="net4sats-captive-portal-balance-panel">
+            {!loading && !error && balance && !balance.sessionActive && <div className="net4sats-captive-portal-balance-panel">
               <div className="net4sats-captive-portal-method-header">
                 <h1>{t('balance_page_title')}</h1>
                 <h2>{t('balance_no_session_message')}</h2>
@@ -103,7 +104,7 @@ const BalancePage = () => {
               </div>
             </div>}
 
-            {!loading && !error && balance && balance.session_active && <div className="net4sats-captive-portal-balance-panel">
+            {!loading && !error && balance && balance.sessionActive && <div className="net4sats-captive-portal-balance-panel">
               <div className="net4sats-captive-portal-method-header">
                 <h1>{t('balance_page_title')}</h1>
                 <h2>{t('balance_page_subtitle')}</h2>
